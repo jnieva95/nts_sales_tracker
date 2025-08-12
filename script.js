@@ -2,7 +2,7 @@
 const SHEETS_CONFIG = {
     API_KEY: 'AIzaSyDL_LMXDnjDTJ7RFg_xYCW4xLZBxXxH2Po', // ✅ Tu API Key configurada
     SHEET_ID: '1-U19hxhu8GX_3VZROHUUbkhhqTASiJto7u_MMvgfU3s', // ✅ Tu Sheet ID
-    RANGE: 'Hoja1!A:L' // Rango de datos
+    RANGE: 'Ventas!A:L' // ✅ Nombre correcto de la hoja
 };
 
 // URLs de la API
