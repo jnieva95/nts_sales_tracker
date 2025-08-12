@@ -1,6 +1,6 @@
 // Configuración de Google Apps Script (Nueva versión con script propio)
 const GAS_CONFIG = {
-    SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbxtrjSV3Sa5qV04KcMI5-IlIHE6nNgBbXLdCPd0yJVwawCDplM0tMkktivWRHKdYIVY/exec'
+    SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbynBJUMWQbu8KhZU4Ztvqc1jogAza0eqtRFKcvIwLz1KB7SLxnn_bhm-FuRVuitFjQY/exec'
 };
 
 // Datos locales (cache)
@@ -93,19 +93,27 @@ function mostrarCarga(mostrar) {
 async function cargarDatosDesdeScript() {
     try {
         console.log('📥 Cargando datos desde Google Apps Script...');
+        console.log('🔗 URL del script:', GAS_CONFIG.SCRIPT_URL);
         
-        const response = await fetch(`${GAS_CONFIG.SCRIPT_URL}?action=getSales`, {
+        const testUrl = `${GAS_CONFIG.SCRIPT_URL}?action=getSales`;
+        console.log('🧪 URL de prueba:', testUrl);
+        
+        const response = await fetch(testUrl, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json'
             }
         });
         
+        console.log('📡 Response status:', response.status);
+        console.log('📡 Response ok:', response.ok);
+        
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            throw new Error(`HTTP error! status: ${response.status} - ${response.statusText}`);
         }
         
         const result = await response.json();
+        console.log('📦 Resultado del script:', result);
         
         if (result.success && result.data && result.data.length > 0) {
             ventasData = result.data.map(venta => ({
@@ -132,13 +140,16 @@ async function cargarDatosDesdeScript() {
             
             console.log(`✅ Cargadas ${ventasData.length} ventas desde Google Apps Script`);
         } else {
-            console.log('📝 Hoja vacía, iniciando con datos de ejemplo');
+            console.log('📝 Hoja vacía o sin datos, iniciando con datos de ejemplo');
             await inicializarDatosEjemplo();
         }
         
     } catch (error) {
-        console.error('❌ Error cargando datos desde script:', error);
-        alert('Error conectando con Google Apps Script. Verifique su conexión.');
+        console.error('❌ Error completo:', error);
+        console.error('❌ Error message:', error.message);
+        console.error('❌ Error stack:', error.stack);
+        
+        alert(`Error conectando con Google Apps Script: ${error.message}\n\nVerifique que el script esté publicado correctamente.`);
         // Cargar datos de ejemplo en caso de error
         inicializarDatosEjemplo();
     }
