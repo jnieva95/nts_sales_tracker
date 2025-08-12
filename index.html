@@ -56,6 +56,22 @@
                     <input type="date" id="fechaVenta" required>
                 </div>
                 <div class="form-group">
+                    <label>Tipo de Venta</label>
+                    <select id="tipoVenta" required>
+                        <option value="">Seleccionar tipo...</option>
+                        <option value="Hotel">🏨 Hotel</option>
+                        <option value="Vuelos">✈️ Vuelos</option>
+                        <option value="Cruceros">🚢 Cruceros</option>
+                        <option value="Excursion">🗺️ Excursión</option>
+                        <option value="Traslado">🚐 Traslado</option>
+                        <option value="Paquete Completo">📦 Paquete Completo</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Destino</label>
+                    <input type="text" id="destino" placeholder="París, Roma, Barcelona" required>
+                </div>
+                <div class="form-group">
                     <label>Monto Total (USD)</label>
                     <input type="number" id="montoTotal" step="0.01" min="0" placeholder="15000.00" required>
                 </div>
@@ -77,10 +93,6 @@
                     <input type="number" id="montoPagado" step="0.01" min="0" placeholder="0.00">
                 </div>
                 <div class="form-group">
-                    <label>Destino</label>
-                    <input type="text" id="destino" placeholder="París, Roma, Barcelona" required>
-                </div>
-                <div class="form-group">
                     <label>Fecha de Viaje</label>
                     <input type="date" id="fechaViaje" required>
                 </div>
@@ -94,11 +106,49 @@
         
         <div class="form-section">
             <h3>🔍 Filtros y Búsqueda</h3>
+            <div class="quick-stats">
+                <div class="quick-stat">
+                    <h4>🏨 Hoteles</h4>
+                    <div class="value" id="statHoteles">0</div>
+                </div>
+                <div class="quick-stat">
+                    <h4>✈️ Vuelos</h4>
+                    <div class="value" id="statVuelos">0</div>
+                </div>
+                <div class="quick-stat">
+                    <h4>🚢 Cruceros</h4>
+                    <div class="value" id="statCruceros">0</div>
+                </div>
+                <div class="quick-stat">
+                    <h4>🗺️ Excursiones</h4>
+                    <div class="value" id="statExcursiones">0</div>
+                </div>
+                <div class="quick-stat">
+                    <h4>🚐 Traslados</h4>
+                    <div class="value" id="statTraslados">0</div>
+                </div>
+                <div class="quick-stat">
+                    <h4>📦 Paquetes</h4>
+                    <div class="value" id="statPaquetes">0</div>
+                </div>
+            </div>
             <div class="filters">
+                <div class="filter-group">
+                    <label>Tipo de Venta</label>
+                    <select id="filtroTipo" onchange="filtrarTabla()">
+                        <option value="">Todos los tipos</option>
+                        <option value="Hotel">🏨 Hotel</option>
+                        <option value="Vuelos">✈️ Vuelos</option>
+                        <option value="Cruceros">🚢 Cruceros</option>
+                        <option value="Excursion">🗺️ Excursión</option>
+                        <option value="Traslado">🚐 Traslado</option>
+                        <option value="Paquete Completo">📦 Paquete Completo</option>
+                    </select>
+                </div>
                 <div class="filter-group">
                     <label>Estado de Pago</label>
                     <select id="filtroEstado" onchange="filtrarTabla()">
-                        <option value="">Todos</option>
+                        <option value="">Todos los estados</option>
                         <option value="Reservado">Reservado</option>
                         <option value="Parcialmente Pagado">Parcialmente Pagado</option>
                         <option value="Pagado">Pagado</option>
@@ -130,13 +180,14 @@
                     <tr>
                         <th>N° Orden</th>
                         <th>Cliente</th>
-                        <th>Fecha Venta</th>
+                        <th>Tipo</th>
                         <th>Destino</th>
+                        <th>Fecha Venta</th>
                         <th>Fecha Viaje</th>
                         <th>Monto Total</th>
-                        <th>Monto Pagado</th>
-                        <th>Monto Restante</th>
-                        <th>Estado Pago</th>
+                        <th>Pagado</th>
+                        <th>Restante</th>
+                        <th>Estado</th>
                         <th>Utilidad</th>
                         <th>Acciones</th>
                     </tr>
