@@ -282,4 +282,107 @@ function registrarPago(index) {
             venta.estadoPago = 'Parcialmente Pagado';
         }
         
-        actu
+        actualizarDashboard();
+        renderizarTabla();
+        
+        alert(`✅ Pago de ${montoNuevo.toLocaleString()} registrado para ${venta.nombreCliente}`);
+    } else if (nuevoPago !== null) {
+        alert('❌ Por favor ingrese un monto válido mayor a 0');
+    }
+}
+
+function cancelarReserva(index) {
+    if (index < 0 || index >= ventasData.length) {
+        alert('❌ Error: Venta no encontrada');
+        return;
+    }
+    
+    const venta = ventasData[index];
+    
+    if (venta.estadoPago === 'Cancelado') {
+        alert('❌ Esta reserva ya está cancelada');
+        return;
+    }
+    
+    const confirmacion = confirm(`¿Está seguro de cancelar la reserva de ${venta.nombreCliente}?\n\nOrden: ${venta.numeroOrden}\nDestino: ${venta.destino}\nMonto: ${venta.montoTotal.toLocaleString()}\n\nEsta acción cambiará el estado a "CANCELADO" pero mantendrá el registro.`);
+    
+    if (confirmacion) {
+        venta.estadoPago = 'Cancelado';
+        venta.notas += ` [CANCELADO el ${new Date().toLocaleDateString('es-AR')}]`;
+        
+        actualizarDashboard();
+        renderizarTabla();
+        
+        alert(`❌ Reserva de ${venta.nombreCliente} marcada como CANCELADA`);
+    }
+}
+
+function eliminarVenta(index) {
+    if (index < 0 || index >= ventasData.length) {
+        alert('❌ Error: Venta no encontrada');
+        return;
+    }
+    
+    const venta = ventasData[index];
+    
+    const confirmacion = confirm(`⚠️ ATENCIÓN: ¿Está seguro de ELIMINAR PERMANENTEMENTE esta venta?\n\nCliente: ${venta.nombreCliente}\nOrden: ${venta.numeroOrden}\nMonto: ${venta.montoTotal.toLocaleString()}\n\n❗ Esta acción NO se puede deshacer. El registro se eliminará completamente.\n\n💡 Recomendación: Use "Cancelar" en lugar de "Eliminar" para mantener el historial.`);
+    
+    if (confirmacion) {
+        const textoConfirmacion = prompt('Para confirmar la eliminación permanente, escriba exactamente: ELIMINAR');
+        
+        if (textoConfirmacion === 'ELIMINAR') {
+            const nombreCliente = venta.nombreCliente;
+            ventasData.splice(index, 1);
+            
+            actualizarDashboard();
+            renderizarTabla();
+            
+            alert(`🗑️ Venta de ${nombreCliente} eliminada permanentemente`);
+        } else {
+            alert('❌ Eliminación cancelada - debe escribir exactamente "ELIMINAR"');
+        }
+    }
+}
+
+function exportarCSV() {
+    const headers = ['N° Orden', 'Cliente', 'Email', 'Fecha Venta', 'Destino', 'Fecha Viaje', 'Monto Total', 'Monto Pagado', 'Monto Restante', 'Estado Pago', 'Utilidad', 'Notas'];
+    
+    let csvContent = headers.join(',') + '\n';
+    
+    ventasData.forEach(venta => {
+        const montoRestante = venta.montoTotal - venta.montoPagado;
+        const utilidad = venta.montoTotal - venta.costoViaje;
+        
+        const row = [
+            venta.numeroOrden,
+            `"${venta.nombreCliente}"`,
+            venta.emailCliente,
+            venta.fechaVenta,
+            `"${venta.destino}"`,
+            venta.fechaViaje,
+            venta.montoTotal,
+            venta.montoPagado,
+            montoRestante,
+            `"${venta.estadoPago}"`,
+            utilidad,
+            `"${venta.notas}"`
+        ];
+        csvContent += row.join(',') + '\n';
+    });
+    
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `NTS_Ventas_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+}
+
+function exportarExcel() {
+    alert('📈 Función de exportar a Excel en desarrollo. Por ahora use la exportación CSV.');
+}
+
+function imprimirReporte() {
+    window.print();
+}
