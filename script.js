@@ -450,11 +450,13 @@ function renderizarTabla(datos = ventasData) {
             <td><span class="status ${venta.estadoPago.toLowerCase().replace(' ', '-')}">${venta.estadoPago}</span></td>
             <td class="amount ${utilidad > 0 ? 'positive' : 'negative'}">$${utilidad.toLocaleString()}</td>
             <td>
-                <button class="btn btn-small btn-success" onclick="registrarPago(${ventaIndexReal})" title="Registrar Pago">💰</button>
-                <button class="btn btn-small btn-warning" onclick="editarVenta(${ventaIndexReal})" title="Editar">✏️</button>
-                <button class="btn btn-small btn-warning" onclick="cancelarReserva(${ventaIndexReal})" title="Cancelar">❌</button>
-                <button class="btn btn-small btn-danger" onclick="eliminarVenta(${ventaIndexReal})" title="Eliminar">🗑️</button>
-                <button class="btn btn-small" onclick="sincronizarDatos()" title="Sincronizar">🔄</button>
+                <div class="actions-container">
+                    <button class="btn btn-small btn-success" onclick="registrarPago(${ventaIndexReal})" title="Registrar Pago">💰</button>
+                    <button class="btn btn-small btn-warning" onclick="editarVenta(${ventaIndexReal})" title="Editar">✏️</button>
+                    <button class="btn btn-small btn-warning" onclick="cancelarReserva(${ventaIndexReal})" title="Cancelar">❌</button>
+                    <button class="btn btn-small btn-danger" onclick="eliminarVenta(${ventaIndexReal})" title="Eliminar">🗑️</button>
+                    <button class="btn btn-small" onclick="sincronizarDatos()" title="Sincronizar">🔄</button>
+                </div>
             </td>
         `;
     });
