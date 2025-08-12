@@ -245,6 +245,53 @@ tr:hover {
     min-width: 150px;
 }
 
+.tipo-venta {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.85em;
+    font-weight: 600;
+}
+
+.tipo-venta.hotel { background: #e3f2fd; color: #1565c0; }
+.tipo-venta.vuelos { background: #f3e5f5; color: #7b1fa2; }
+.tipo-venta.cruceros { background: #e0f2f1; color: #00695c; }
+.tipo-venta.excursion { background: #fff3e0; color: #ef6c00; }
+.tipo-venta.traslado { background: #fce4ec; color: #c2185b; }
+.tipo-venta.paquete-completo { background: #f1f8e9; color: #558b2f; }
+
+.quick-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 12px;
+}
+
+.quick-stat {
+    text-align: center;
+    padding: 15px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.quick-stat h4 {
+    font-size: 0.9em;
+    color: #666;
+    margin-bottom: 5px;
+}
+
+.quick-stat .value {
+    font-size: 1.5em;
+    font-weight: bold;
+    color: #00bcd4;
+}
+
 @media (max-width: 768px) {
     .dashboard {
         grid-template-columns: 1fr;
@@ -262,5 +309,9 @@ tr:hover {
     .filters {
         flex-direction: column;
         align-items: stretch;
+    }
+    
+    .quick-stats {
+        grid-template-columns: 1fr;
     }
 }
