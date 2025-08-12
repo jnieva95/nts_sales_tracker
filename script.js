@@ -1,14 +1,7 @@
-// Configuración de Google Sheets API (Versión Simple)
-const SHEETS_CONFIG = {
-    API_KEY: 'AIzaSyDL_LMXDnjDTJ7RFg_xYCW4xLZBxXxH2Po', // ✅ Tu API Key configurada
-    SHEET_ID: '1-U19hxhu8GX_3VZROHUUbkhhqTASiJto7u_MMvgfU3s', // ✅ Tu Sheet ID
-    RANGE: 'Ventas!A:L' // ✅ Nombre correcto de la hoja
+// Configuración de Google Apps Script (Nueva versión con script propio)
+const GAS_CONFIG = {
+    SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbxtrjSV3Sa5qV04KcMI5-IlIHE6nNgBbXLdCPd0yJVwawCDplM0tMkktivWRHKdYIVY/exec'
 };
-
-// URLs de la API
-const SHEETS_API_BASE = 'https://sheets.googleapis.com/v4/spreadsheets';
-const READ_URL = `${SHEETS_API_BASE}/${SHEETS_CONFIG.SHEET_ID}/values/${SHEETS_CONFIG.RANGE}?key=${SHEETS_CONFIG.API_KEY}`;
-const WRITE_URL = `${SHEETS_API_BASE}/${SHEETS_CONFIG.SHEET_ID}/values/${SHEETS_CONFIG.RANGE}:append?valueInputOption=RAW&key=${SHEETS_CONFIG.API_KEY}`;
 
 // Datos locales (cache)
 let ventasData = [];
@@ -19,41 +12,14 @@ let isLoading = false;
 
 // Inicializar la aplicación
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🚀 Iniciando NTS Sales Tracker...');
-    
-    // Verificar configuración
-    if (SHEETS_CONFIG.API_KEY === 'TU_API_KEY_AQUI') {
-        alert(`⚠️ CONFIGURACIÓN REQUERIDA
-
-PASO 1: Obtener API Key
-• Ve a: console.cloud.google.com
-• APIs y servicios → Credenciales
-• Crear credenciales → Clave de API
-• Copiar la clave generada
-
-PASO 2: Configurar permisos del Sheet
-• En tu Google Sheet, clic "Compartir"
-• Cambiar a "Cualquier persona con enlace puede ver"
-
-PASO 3: Actualizar el código
-• Reemplazar 'TU_API_KEY_AQUI' con tu API Key
-
-Por ahora cargaré datos de ejemplo...`);
-        
-        // Cargar datos de ejemplo por ahora
-        await inicializarDatosEjemplo();
-        configurarInterfaz();
-        actualizarDashboard();
-        renderizarTabla();
-        return;
-    }
+    console.log('🚀 Iniciando NTS Sales Tracker con Google Apps Script...');
     
     // Mostrar indicador de carga
     mostrarCarga(true);
     
     try {
-        // Cargar datos desde Google Sheets
-        await cargarDatosDesdeSheets();
+        // Cargar datos desde Google Apps Script
+        await cargarDatosDesdeScript();
         
         // Configurar interfaz
         configurarInterfaz();
@@ -66,7 +32,7 @@ Por ahora cargaré datos de ejemplo...`);
         
     } catch (error) {
         console.error('❌ Error iniciando aplicación:', error);
-        alert('Error conectando con Google Sheets. Usando datos locales por ahora.');
+        alert('Error conectando con Google Apps Script. Usando datos locales por ahora.');
         
         // Fallback a datos locales
         await inicializarDatosEjemplo();
@@ -123,37 +89,38 @@ function mostrarCarga(mostrar) {
     }
 }
 
-// Cargar datos desde Google Sheets
-async function cargarDatosDesdeSheets() {
+// Cargar datos desde Google Apps Script
+async function cargarDatosDesdeScript() {
     try {
-        console.log('📥 Cargando datos desde Google Sheets...');
+        console.log('📥 Cargando datos desde Google Apps Script...');
         
-        const response = await fetch(READ_URL);
+        const response = await fetch(`${GAS_CONFIG.SCRIPT_URL}?action=getSales`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
         
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status} - ${response.statusText}`);
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
         
-        const data = await response.json();
+        const result = await response.json();
         
-        if (data.values && data.values.length > 1) {
-            // Convertir datos de Sheets a formato de la aplicación
-            const headers = data.values[0];
-            const rows = data.values.slice(1);
-            
-            ventasData = rows.map(row => ({
-                numeroOrden: row[0] || '',
-                nombreCliente: row[1] || '',
-                emailCliente: row[2] || '',
-                fechaVenta: row[3] || '',
-                tipoVenta: row[4] || '',
-                destino: row[5] || '',
-                fechaViaje: row[6] || '',
-                montoTotal: parseFloat(row[7]) || 0,
-                costoViaje: parseFloat(row[8]) || 0,
-                montoPagado: parseFloat(row[9]) || 0,
-                estadoPago: row[10] || 'Reservado',
-                notas: row[11] || ''
+        if (result.success && result.data && result.data.length > 0) {
+            ventasData = result.data.map(venta => ({
+                numeroOrden: venta.numeroOrden || '',
+                nombreCliente: venta.nombreCliente || '',
+                emailCliente: venta.emailCliente || '',
+                fechaVenta: venta.fechaVenta || '',
+                tipoVenta: venta.tipoVenta || '',
+                destino: venta.destino || '',
+                fechaViaje: venta.fechaViaje || '',
+                montoTotal: parseFloat(venta.montoTotal) || 0,
+                costoViaje: parseFloat(venta.costoViaje) || 0,
+                montoPagado: parseFloat(venta.montoPagado) || 0,
+                estadoPago: venta.estadoPago || 'Reservado',
+                notas: venta.notas || ''
             }));
             
             // Actualizar contador de órdenes
@@ -163,23 +130,15 @@ async function cargarDatosDesdeSheets() {
             }, 0);
             contadorOrden = ultimaOrden + 1;
             
-            console.log(`✅ Cargadas ${ventasData.length} ventas desde Google Sheets`);
+            console.log(`✅ Cargadas ${ventasData.length} ventas desde Google Apps Script`);
         } else {
             console.log('📝 Hoja vacía, iniciando con datos de ejemplo');
             await inicializarDatosEjemplo();
         }
         
     } catch (error) {
-        console.error('❌ Error cargando datos:', error);
-        
-        if (error.message.includes('403')) {
-            alert('❌ Error 403: Verifica que tu Google Sheet tenga permisos públicos ("Cualquier persona con enlace puede ver")');
-        } else if (error.message.includes('400')) {
-            alert('❌ Error 400: Verifica tu API Key de Google Cloud Console');
-        } else {
-            alert('❌ Error conectando con Google Sheets. Verifique su conexión.');
-        }
-        
+        console.error('❌ Error cargando datos desde script:', error);
+        alert('Error conectando con Google Apps Script. Verifique su conexión.');
         // Cargar datos de ejemplo en caso de error
         inicializarDatosEjemplo();
     }
@@ -341,17 +300,13 @@ async function registrarVenta(e) {
     actualizarDashboard();
     renderizarTabla();
     
-    // Intentar guardar en Google Sheets (en segundo plano)
-    if (SHEETS_CONFIG.API_KEY !== 'TU_API_KEY_AQUI') {
-        const guardadoExitoso = await guardarEnSheets(nuevaVenta);
-        
-        if (guardadoExitoso) {
-            alert('✅ Venta registrada y sincronizada exitosamente!');
-        } else {
-            alert('⚠️ Venta registrada localmente. Problemas de sincronización con Google Sheets.');
-        }
+    // Intentar guardar en Google Apps Script (en segundo plano)
+    const guardadoExitoso = await guardarEnScript(nuevaVenta);
+    
+    if (guardadoExitoso) {
+        alert('✅ Venta registrada y sincronizada exitosamente!');
     } else {
-        alert('✅ Venta registrada localmente! (Configure API Key para sincronizar con Google Sheets)');
+        alert('⚠️ Venta registrada localmente. Problemas de sincronización con Google Apps Script.');
     }
     
     console.log('✅ Venta registrada:', nuevaVenta.numeroOrden);
