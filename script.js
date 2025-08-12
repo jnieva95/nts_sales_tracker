@@ -451,7 +451,9 @@ function renderizarTabla(datos = ventasData) {
             <td class="amount ${utilidad > 0 ? 'positive' : 'negative'}">$${utilidad.toLocaleString()}</td>
             <td>
                 <button class="btn btn-small btn-success" onclick="registrarPago(${ventaIndexReal})" title="Registrar Pago">💰</button>
+                <button class="btn btn-small btn-warning" onclick="editarVenta(${ventaIndexReal})" title="Editar">✏️</button>
                 <button class="btn btn-small btn-warning" onclick="cancelarReserva(${ventaIndexReal})" title="Cancelar">❌</button>
+                <button class="btn btn-small btn-danger" onclick="eliminarVenta(${ventaIndexReal})" title="Eliminar">🗑️</button>
                 <button class="btn btn-small" onclick="sincronizarDatos()" title="Sincronizar">🔄</button>
             </td>
         `;
@@ -572,6 +574,127 @@ async function cancelarReserva(index) {
         
         alert(`❌ Reserva de ${venta.nombreCliente} marcada como CANCELADA\n\n⚠️ Use el botón 🔄 para sincronizar con Google Sheets`);
     }
+}
+
+async function eliminarVenta(index) {
+    if (index < 0 || index >= ventasData.length) {
+        alert('❌ Error: Venta no encontrada');
+        return;
+    }
+    
+    const venta = ventasData[index];
+    
+    const confirmacion = confirm(`⚠️ ATENCIÓN: ¿Está seguro de ELIMINAR PERMANENTEMENTE esta venta?
+
+Cliente: ${venta.nombreCliente}
+Orden: ${venta.numeroOrden}
+Tipo: ${venta.tipoVenta}
+Destino: ${venta.destino}
+Monto: ${venta.montoTotal.toLocaleString()}
+
+❗ Esta acción NO se puede deshacer. El registro se eliminará completamente.
+
+💡 Recomendación: Use "Cancelar" (❌) en lugar de "Eliminar" (🗑️) para mantener el historial.`);
+    
+    if (confirmacion) {
+        // Segunda confirmación para evitar eliminaciones accidentales
+        const textoConfirmacion = prompt(`🚨 CONFIRMACIÓN FINAL
+
+Para eliminar permanentemente la venta de ${venta.nombreCliente}, escriba exactamente: ELIMINAR
+
+(O presione Cancelar para abortar)`);
+        
+        if (textoConfirmacion === 'ELIMINAR') {
+            const nombreCliente = venta.nombreCliente;
+            
+            // Eliminar del array local
+            ventasData.splice(index, 1);
+            
+            // Actualizar vista
+            actualizarDashboard();
+            renderizarTabla();
+            
+            alert(`🗑️ Venta de ${nombreCliente} eliminada permanentemente
+
+⚠️ IMPORTANTE: Use el botón 🔄 Sincronizar para actualizar Google Sheets y eliminar el registro también allí.`);
+            
+            console.log(`✅ Venta eliminada: ${nombreCliente}`);
+        } else {
+            alert('❌ Eliminación cancelada - debe escribir exactamente "ELIMINAR"');
+        }
+    }
+}
+
+async function editarVenta(index) {
+    if (index < 0 || index >= ventasData.length) {
+        alert('❌ Error: Venta no encontrada');
+        return;
+    }
+    
+    const venta = ventasData[index];
+    
+    // Llenar el formulario con los datos de la venta
+    document.getElementById('numeroOrden').value = venta.numeroOrden;
+    document.getElementById('nombreCliente').value = venta.nombreCliente;
+    document.getElementById('emailCliente').value = venta.emailCliente;
+    document.getElementById('fechaVenta').value = venta.fechaVenta;
+    document.getElementById('tipoVenta').value = venta.tipoVenta;
+    document.getElementById('destino').value = venta.destino;
+    document.getElementById('fechaViaje').value = venta.fechaViaje;
+    document.getElementById('montoTotal').value = venta.montoTotal;
+    document.getElementById('costoViaje').value = venta.costoViaje;
+    document.getElementById('montoPagado').value = venta.montoPagado;
+    document.getElementById('estadoPago').value = venta.estadoPago;
+    document.getElementById('notas').value = venta.notas;
+    
+    // Eliminar la venta original del array (se volverá a agregar cuando se envíe el formulario)
+    ventasData.splice(index, 1);
+    contadorOrden--;
+    
+    // Actualizar vista
+    actualizarDashboard();
+    renderizarTabla();
+    
+    // Scroll al formulario para que el usuario vea que está en modo edición
+    document.querySelector('.form-section').scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'start'
+    });
+    
+    // Cambiar el color del formulario para indicar modo edición
+    const formSection = document.querySelector('.form-section');
+    const originalBg = formSection.style.background;
+    formSection.style.background = '#fff3cd';
+    formSection.style.border = '2px solid #ffc107';
+    
+    // Agregar mensaje de edición
+    let editMessage = document.getElementById('editMessage');
+    if (!editMessage) {
+        editMessage = document.createElement('div');
+        editMessage.id = 'editMessage';
+        editMessage.innerHTML = `
+            <div style="background: #d4edda; color: #155724; padding: 10px; border-radius: 5px; margin-bottom: 15px; border: 1px solid #c3e6cb;">
+                <strong>📝 MODO EDICIÓN:</strong> Editando venta de ${venta.nombreCliente}. 
+                Modifique los campos necesarios y presione "Registrar Venta" para guardar los cambios.
+            </div>
+        `;
+        formSection.insertBefore(editMessage, formSection.firstChild.nextSibling);
+    }
+    
+    // Restaurar estilo original después de que se envíe el formulario
+    const form = document.getElementById('ventaForm');
+    const handleSubmit = () => {
+        formSection.style.background = originalBg;
+        formSection.style.border = '';
+        if (editMessage) editMessage.remove();
+        form.removeEventListener('submit', handleSubmit);
+    };
+    form.addEventListener('submit', handleSubmit);
+    
+    alert(`📝 Modo edición activado para ${venta.nombreCliente}
+
+El formulario se ha llenado con los datos actuales. 
+Modifique lo que necesite y presione "💾 Registrar Venta" para guardar los cambios.`);
 }
 
 function exportarCSV() {
