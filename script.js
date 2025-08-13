@@ -137,28 +137,26 @@ async function cargarDatosDesdeScript() {
     }
 }
 
-// Función universal para hacer requests al script (evita CORS)
+// Función mejorada para hacer requests al script
 function makeScriptRequest(action, params = {}) {
     return new Promise((resolve, reject) => {
-        // Crear nombre único para callback
         const callbackName = 'script_callback_' + Math.round(100000 * Math.random());
         
-        // Crear URL con parámetros
+        // Crear URL base
         let url = `${GAS_CONFIG.SCRIPT_URL}?action=${action}&callback=${callbackName}`;
         
-        // Agregar parámetros adicionales
+        // Agregar parámetros (CAMBIO: usar nombres correctos)
         Object.keys(params).forEach(key => {
             url += `&${key}=${encodeURIComponent(JSON.stringify(params[key]))}`;
         });
         
-        console.log('🌐 Llamando script con URL:', url);
+        console.log('🌐 URL completa:', url);
         
-        // Crear elemento script
         const script = document.createElement('script');
         
-        // Definir callback global
+        // Callback global
         window[callbackName] = function(data) {
-            console.log('📥 Respuesta recibida:', data);
+            console.log('📥 Respuesta recibida del script:', data);
             delete window[callbackName];
             if (document.body.contains(script)) {
                 document.body.removeChild(script);
@@ -172,54 +170,49 @@ function makeScriptRequest(action, params = {}) {
             if (document.body.contains(script)) {
                 document.body.removeChild(script);
             }
-            reject(new Error('Error cargando script - verifique que esté publicado correctamente'));
+            reject(new Error('Error cargando script'));
         };
         
-        // Configurar y agregar script
         script.src = url;
         document.body.appendChild(script);
         
-        // Timeout de 15 segundos
+        // Timeout
         setTimeout(() => {
             if (window[callbackName]) {
                 delete window[callbackName];
                 if (document.body.contains(script)) {
                     document.body.removeChild(script);
                 }
-                reject(new Error('Timeout - Google Apps Script no respondió en 15 segundos'));
+                reject(new Error('Timeout'));
             }
         }, 15000);
     });
 }
-
-// FUNCIÓN FALTANTE: Guardar datos en Google Apps Script
+// FUNCIÓN CORREGIDA: Guardar datos en Google Apps Script
 async function guardarEnScript(nuevaVenta) {
     try {
         console.log('💾 Guardando venta en Google Apps Script...', nuevaVenta.numeroOrden);
         mostrarCarga(true);
         
-        const result = await makeScriptRequest('addSale', { venta: nuevaVenta });
+        // CAMBIO: Usar 'saleData' en lugar de 'venta'
+        const result = await makeScriptRequest('addSale', { saleData: nuevaVenta });
         console.log('📦 Respuesta completa del script:', result);
         
-        // Verificar diferentes formatos de respuesta
-        if (result && (result.success === true || result.status === 'success' || result === 'OK')) {
+        if (result && result.success === true) {
             console.log('✅ Venta guardada exitosamente en Google Apps Script');
             return true;
-        } else if (result && result.error) {
-            console.error('❌ Error del script:', result.error);
-            throw new Error(result.error);
-        } else if (result) {
-            // Si hay respuesta pero no tiene formato esperado, asumir éxito
-            console.log('✅ Respuesta del script (formato no estándar):', result);
-            return true;
+        } else if (result && result.success === false) {
+            console.error('❌ Error del script:', result.message);
+            throw new Error(result.message || 'Error del Google Apps Script');
         } else {
-            throw new Error('Sin respuesta del Google Apps Script');
+            console.log('⚠️ Respuesta inesperada:', result);
+            return false;
         }
         
     } catch (error) {
         console.error('❌ Error completo guardando en Google Apps Script:', error);
         console.log('💡 Continuando con datos locales...');
-        return false; // No fallar, solo continuar localmente
+        return false;
     } finally {
         mostrarCarga(false);
     }
