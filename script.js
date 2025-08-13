@@ -1,6 +1,6 @@
 // Configuración de Google Apps Script (Nueva versión con script propio)
 const GAS_CONFIG = {
-    SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbz21ggFPEfI7ShmgOnUO3KkTBQEjoD6qNjtol4fChmJLD_Zg0kNOiOIETRaPMAe3rPx/exec'
+    SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbzUECzEA1fNu7x0Id7NaGtPFfxtbS7_WjqrOX67FBgzJcmGXav0BEJ1YKRtSUhEsXOC/exec'
 };
 
 // Datos locales (cache)
@@ -188,29 +188,33 @@ function makeScriptRequest(action, params = {}) {
         }, 15000);
     });
 }
-// FUNCIÓN CORREGIDA: Guardar datos en Google Apps Script
-async function guardarEnScript(nuevaVenta) {
+// NUEVA FUNCIÓN: Actualizar venta existente en Google Apps Script
+async function actualizarEnScript(ventaActualizada) {
     try {
-        console.log('💾 Guardando venta en Google Apps Script...', nuevaVenta.numeroOrden);
+        console.log('🔄 Actualizando venta en Google Apps Script...', ventaActualizada.numeroOrden);
         mostrarCarga(true);
         
-        // CAMBIO: Usar 'saleData' en lugar de 'venta'
-        const result = await makeScriptRequest('addSale', { saleData: nuevaVenta });
-        console.log('📦 Respuesta completa del script:', result);
+        // Usar la acción 'updateSale' con los datos correctos
+        const result = await makeScriptRequest('updateSale', { 
+            saleData: ventaActualizada,
+            orderNumber: ventaActualizada.numeroOrden
+        });
+        
+        console.log('📦 Respuesta de actualización:', result);
         
         if (result && result.success === true) {
-            console.log('✅ Venta guardada exitosamente en Google Apps Script');
+            console.log('✅ Venta actualizada exitosamente en Google Apps Script');
             return true;
         } else if (result && result.success === false) {
-            console.error('❌ Error del script:', result.message);
-            throw new Error(result.message || 'Error del Google Apps Script');
+            console.error('❌ Error actualizando en script:', result.message);
+            throw new Error(result.message || 'Error actualizando en Google Apps Script');
         } else {
-            console.log('⚠️ Respuesta inesperada:', result);
+            console.log('⚠️ Respuesta inesperada al actualizar:', result);
             return false;
         }
         
     } catch (error) {
-        console.error('❌ Error completo guardando en Google Apps Script:', error);
+        console.error('❌ Error completo actualizando en Google Apps Script:', error);
         console.log('💡 Continuando con datos locales...');
         return false;
     } finally {
@@ -318,27 +322,36 @@ function generarNumeroOrden() {
     document.getElementById('numeroOrden').value = numeroOrden;
 }
 
-// Registrar nueva venta
+// Registrar nueva venta (VERSIÓN CORREGIDA - detecta edición vs nueva venta)
 async function registrarVenta(e) {
     e.preventDefault();
     
     if (isLoading) return;
     
-    console.log('📝 Registrando nueva venta...');
+    console.log('📝 Registrando venta...');
     
     // Validar campos requeridos
     const nombreCliente = document.getElementById('nombreCliente').value.trim();
     const emailCliente = document.getElementById('emailCliente').value.trim();
     const tipoVenta = document.getElementById('tipoVenta').value;
     const destino = document.getElementById('destino').value.trim();
+    const numeroOrden = document.getElementById('numeroOrden').value;
     
     if (!nombreCliente || !emailCliente || !tipoVenta || !destino) {
         alert('❌ Por favor complete todos los campos requeridos');
         return;
     }
     
+    // DETECTAR SI ES EDICIÓN: verificar si el número de orden ya existe en los datos locales
+    const indiceExistente = ventasData.findIndex(venta => venta.numeroOrden === numeroOrden);
+    const esEdicion = indiceExistente !== -1;
+    
+    console.log('🔍 Número de orden:', numeroOrden);
+    console.log('🔍 ¿Es edición?', esEdicion);
+    console.log('🔍 Índice existente:', indiceExistente);
+    
     const nuevaVenta = {
-        numeroOrden: document.getElementById('numeroOrden').value,
+        numeroOrden: numeroOrden,
         nombreCliente: nombreCliente,
         emailCliente: emailCliente,
         fechaVenta: document.getElementById('fechaVenta').value,
@@ -352,29 +365,60 @@ async function registrarVenta(e) {
         notas: document.getElementById('notas').value || ''
     };
     
-    // Agregar a datos locales primero
-    ventasData.push(nuevaVenta);
-    contadorOrden++;
+    // Actualizar datos locales
+    if (esEdicion) {
+        console.log('✏️ Actualizando venta existente...');
+        ventasData[indiceExistente] = nuevaVenta;
+    } else {
+        console.log('➕ Agregando nueva venta...');
+        ventasData.push(nuevaVenta);
+        contadorOrden++;
+    }
     
     // Limpiar formulario
     document.getElementById('ventaForm').reset();
     document.getElementById('fechaVenta').value = new Date().toISOString().split('T')[0];
     generarNumeroOrden();
     
+    // Limpiar mensaje de edición si existe
+    const editMessage = document.getElementById('editMessage');
+    if (editMessage) editMessage.remove();
+    
+    // Restaurar estilo del formulario
+    const formSection = document.querySelector('.form-section');
+    if (formSection) {
+        formSection.style.background = '';
+        formSection.style.border = '';
+    }
+    
     // Actualizar vista inmediatamente
     actualizarDashboard();
     renderizarTabla();
     
-    // Intentar guardar en Google Apps Script (en segundo plano)
-    const guardadoExitoso = await guardarEnScript(nuevaVenta);
+    // Sincronizar con Google Apps Script
+    let guardadoExitoso;
     
-    if (guardadoExitoso) {
-        alert('✅ Venta registrada y sincronizada exitosamente!');
+    if (esEdicion) {
+        console.log('🔄 Sincronizando actualización con Google Apps Script...');
+        guardadoExitoso = await actualizarEnScript(nuevaVenta);
+        
+        if (guardadoExitoso) {
+            alert(`✅ Venta de ${nuevaVenta.nombreCliente} actualizada y sincronizada exitosamente!`);
+        } else {
+            alert(`⚠️ Venta de ${nuevaVenta.nombreCliente} actualizada localmente. Problemas de sincronización con Google Apps Script.`);
+        }
     } else {
-        alert('⚠️ Venta registrada localmente. Problemas de sincronización con Google Apps Script.');
+        console.log('💾 Sincronizando nueva venta con Google Apps Script...');
+        guardadoExitoso = await guardarEnScript(nuevaVenta);
+        
+        if (guardadoExitoso) {
+            alert(`✅ Nueva venta de ${nuevaVenta.nombreCliente} registrada y sincronizada exitosamente!`);
+        } else {
+            alert(`⚠️ Nueva venta de ${nuevaVenta.nombreCliente} registrada localmente. Problemas de sincronización con Google Apps Script.`);
+        }
     }
     
-    console.log('✅ Venta registrada:', nuevaVenta.numeroOrden);
+    console.log('✅ Proceso completado:', nuevaVenta.numeroOrden);
 }
 
 // Sincronizar datos (botón manual)
