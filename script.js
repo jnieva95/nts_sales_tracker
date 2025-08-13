@@ -188,6 +188,75 @@ function makeScriptRequest(action, params = {}) {
         }, 15000);
     });
 }
+
+// FUNCIÓN CORREGIDA: Guardar datos en Google Apps Script
+async function guardarEnScript(nuevaVenta) {
+    try {
+        console.log('💾 Guardando venta en Google Apps Script...', nuevaVenta.numeroOrden);
+        mostrarCarga(true);
+        
+        // CAMBIO: Usar 'saleData' en lugar de 'venta'
+        const result = await makeScriptRequest('addSale', { saleData: nuevaVenta });
+        console.log('📦 Respuesta completa del script:', result);
+        
+        if (result && result.success === true) {
+            console.log('✅ Venta guardada exitosamente en Google Apps Script');
+            return true;
+        } else if (result && result.success === false) {
+            console.error('❌ Error del script:', result.message);
+            throw new Error(result.message || 'Error del Google Apps Script');
+        } else {
+            console.log('⚠️ Respuesta inesperada:', result);
+            return false;
+        }
+        
+    } catch (error) {
+        console.error('❌ Error completo guardando en Google Apps Script:', error);
+        console.log('💡 Continuando con datos locales...');
+        return false;
+    } finally {
+        mostrarCarga(false);
+    }
+}
+
+// Función de compatibilidad: mantener guardarEnSheets para referencias existentes
+async function guardarEnSheets(nuevaVenta) {
+    return await guardarEnScript(nuevaVenta);
+}
+
+// NUEVA FUNCIÓN: Actualizar venta existente en Google Apps Script
+async function actualizarEnScript(ventaActualizada) {
+    try {
+        console.log('🔄 Actualizando venta en Google Apps Script...', ventaActualizada.numeroOrden);
+        mostrarCarga(true);
+        
+        // Usar la acción 'updateSale' con los datos correctos
+        const result = await makeScriptRequest('updateSale', { 
+            saleData: ventaActualizada,
+            orderNumber: ventaActualizada.numeroOrden
+        });
+        
+        console.log('📦 Respuesta de actualización:', result);
+        
+        if (result && result.success === true) {
+            console.log('✅ Venta actualizada exitosamente en Google Apps Script');
+            return true;
+        } else if (result && result.success === false) {
+            console.error('❌ Error actualizando en script:', result.message);
+            throw new Error(result.message || 'Error actualizando en Google Apps Script');
+        } else {
+            console.log('⚠️ Respuesta inesperada al actualizar:', result);
+            return false;
+        }
+        
+    } catch (error) {
+        console.error('❌ Error completo actualizando en Google Apps Script:', error);
+        console.log('💡 Continuando con datos locales...');
+        return false;
+    } finally {
+        mostrarCarga(false);
+    }
+}
 // NUEVA FUNCIÓN: Actualizar venta existente en Google Apps Script
 async function actualizarEnScript(ventaActualizada) {
     try {
