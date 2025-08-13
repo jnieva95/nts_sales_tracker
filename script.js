@@ -89,7 +89,7 @@ function mostrarCarga(mostrar) {
     }
 }
 
-// Cargar datos desde Google Apps Script (usando script tag para evitar CORS)
+// Cargar datos desde Google Apps Script (INCLUYENDO NUEVAS COLUMNAS)
 async function cargarDatosDesdeScript() {
     try {
         console.log('📥 Cargando datos desde Google Apps Script...');
@@ -111,6 +111,8 @@ async function cargarDatosDesdeScript() {
                 costoViaje: parseFloat(venta.costoViaje) || 0,
                 montoPagado: parseFloat(venta.montoPagado) || 0,
                 estadoPago: venta.estadoPago || 'Reservado',
+                fechaPago: venta.fechaPago || '',        // ← NUEVA COLUMNA
+                horaPago: venta.horaPago || '',          // ← NUEVA COLUMNA
                 notas: venta.notas || ''
             }));
             
@@ -224,73 +226,6 @@ async function guardarEnSheets(nuevaVenta) {
     return await guardarEnScript(nuevaVenta);
 }
 
-// NUEVA FUNCIÓN: Actualizar venta existente en Google Apps Script
-async function actualizarEnScript(ventaActualizada) {
-    try {
-        console.log('🔄 Actualizando venta en Google Apps Script...', ventaActualizada.numeroOrden);
-        mostrarCarga(true);
-        
-        // Usar la acción 'updateSale' con los datos correctos
-        const result = await makeScriptRequest('updateSale', { 
-            saleData: ventaActualizada,
-            orderNumber: ventaActualizada.numeroOrden
-        });
-        
-        console.log('📦 Respuesta de actualización:', result);
-        
-        if (result && result.success === true) {
-            console.log('✅ Venta actualizada exitosamente en Google Apps Script');
-            return true;
-        } else if (result && result.success === false) {
-            console.error('❌ Error actualizando en script:', result.message);
-            throw new Error(result.message || 'Error actualizando en Google Apps Script');
-        } else {
-            console.log('⚠️ Respuesta inesperada al actualizar:', result);
-            return false;
-        }
-        
-    } catch (error) {
-        console.error('❌ Error completo actualizando en Google Apps Script:', error);
-        console.log('💡 Continuando con datos locales...');
-        return false;
-    } finally {
-        mostrarCarga(false);
-    }
-}
-// NUEVA FUNCIÓN: Actualizar venta existente en Google Apps Script
-async function actualizarEnScript(ventaActualizada) {
-    try {
-        console.log('🔄 Actualizando venta en Google Apps Script...', ventaActualizada.numeroOrden);
-        mostrarCarga(true);
-        
-        // Usar la acción 'updateSale' con los datos correctos
-        const result = await makeScriptRequest('updateSale', { 
-            saleData: ventaActualizada,
-            orderNumber: ventaActualizada.numeroOrden
-        });
-        
-        console.log('📦 Respuesta de actualización:', result);
-        
-        if (result && result.success === true) {
-            console.log('✅ Venta actualizada exitosamente en Google Apps Script');
-            return true;
-        } else if (result && result.success === false) {
-            console.error('❌ Error actualizando en script:', result.message);
-            throw new Error(result.message || 'Error actualizando en Google Apps Script');
-        } else {
-            console.log('⚠️ Respuesta inesperada al actualizar:', result);
-            return false;
-        }
-        
-    } catch (error) {
-        console.error('❌ Error completo actualizando en Google Apps Script:', error);
-        console.log('💡 Continuando con datos locales...');
-        return false;
-    } finally {
-        mostrarCarga(false);
-    }
-}
-
 // Función de compatibilidad: mantener guardarEnSheets para referencias existentes
 async function guardarEnSheets(nuevaVenta) {
     return await guardarEnScript(nuevaVenta);
@@ -391,8 +326,7 @@ function generarNumeroOrden() {
     document.getElementById('numeroOrden').value = numeroOrden;
 }
 
-// Registrar nueva venta (VERSIÓN CORREGIDA - detecta edición vs nueva venta)
-// Registrar nueva venta (SISTEMA DE DIFERENCIAS - crea fila separada para cambios)
+// Registrar nueva venta (SISTEMA DE DIFERENCIAS - CORREGIDO)
 async function registrarVenta(e) {
     e.preventDefault();
     
@@ -462,23 +396,20 @@ async function registrarVenta(e) {
             });
             
             const registroDiferencia = {
-                numeroOrden: numeroOrden + '-PAGO-' + fechaPago.getTime(), // Agregar timestamp único
+                numeroOrden: numeroOrden + '-PAGO-' + fechaPago.getTime(),
                 nombreCliente: nombreCliente + ' (Pago Adicional)',
                 emailCliente: emailCliente,
-                fechaVenta: fechaPagoFormateada, // Fecha del pago
+                fechaVenta: fechaPagoFormateada,
                 tipoVenta: 'Pago Adicional',
                 destino: `Diferencia de Pago - ${destino}`,
                 fechaViaje: nuevaVenta.fechaViaje,
                 montoTotal: 0,
                 costoViaje: 0,
-                montoPagado: diferenciaPago, // Solo la diferencia
+                montoPagado: diferenciaPago,
                 estadoPago: diferenciaPago > 0 ? 'Pago Adicional' : 'Ajuste Negativo',
-                notas: `PAGO REGISTRADO: ${fechaPagoFormateada} a las ${horaPago}
-Orden original: ${numeroOrden}
-Pago anterior: ${ventaOriginal.montoPagado.toLocaleString()}
-Nuevo total pagado: ${nuevaVenta.montoPagado.toLocaleString()}
-Diferencia aplicada: ${diferenciaPago.toLocaleString()}
-${diferenciaPago > 0 ? '💰 Pago adicional recibido' : '⚠️ Ajuste/devolución aplicado'}`
+                fechaPago: fechaPagoFormateada,    // ← NUEVA COLUMNA
+                horaPago: horaPago,                // ← NUEVA COLUMNA
+                notas: `Diferencia de pago para orden ${numeroOrden}. Pago anterior: $${ventaOriginal.montoPagado.toLocaleString()}, Nuevo total: $${nuevaVenta.montoPagado.toLocaleString()}, Diferencia: $${diferenciaPago.toLocaleString()}`
             };
             
             console.log('📝 Creando registro de diferencia:', registroDiferencia);
@@ -490,13 +421,13 @@ ${diferenciaPago > 0 ? '💰 Pago adicional recibido' : '⚠️ Ajuste/devoluci�
                 alert(`✅ Venta de ${nuevaVenta.nombreCliente} actualizada!
                 
 📅 Fecha del pago: ${fechaPagoFormateada} a las ${horaPago}
-💰 Diferencia aplicada: ${diferenciaPago.toLocaleString()}
+💰 Diferencia aplicada: $${diferenciaPago.toLocaleString()}
 ${diferenciaPago > 0 ? '💳 Pago adicional registrado' : '🔄 Ajuste registrado'} en Google Sheets.`);
             } else {
                 alert(`⚠️ Venta actualizada localmente. 
                 
 📅 Fecha del pago: ${fechaPagoFormateada} a las ${horaPago}
-💰 Diferencia: ${diferenciaPago.toLocaleString()}
+💰 Diferencia: $${diferenciaPago.toLocaleString()}
 ❌ Problema sincronizando con Google Sheets.`);
             }
         } else {
@@ -506,6 +437,18 @@ ${diferenciaPago > 0 ? '💳 Pago adicional registrado' : '🔄 Ajuste registrad
     } else {
         // NUEVA VENTA - proceso normal
         console.log('➕ Agregando nueva venta...');
+        
+        // Para nuevas ventas, agregar fechaPago si hay monto pagado
+        if (nuevaVenta.montoPagado > 0) {
+            const fechaPago = new Date();
+            nuevaVenta.fechaPago = fechaPago.toISOString().split('T')[0];
+            nuevaVenta.horaPago = fechaPago.toLocaleTimeString('es-AR', { 
+                hour: '2-digit', 
+                minute: '2-digit',
+                hour12: false 
+            });
+        }
+        
         ventasData.push(nuevaVenta);
         contadorOrden++;
         
