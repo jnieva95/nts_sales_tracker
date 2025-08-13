@@ -1,6 +1,6 @@
 // Configuración de Google Apps Script (Nueva versión con script propio)
 const GAS_CONFIG = {
-    SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbynBJUMWQbu8KhZU4Ztvqc1jogAza0eqtRFKcvIwLz1KB7SLxnn_bhm-FuRVuitFjQY/exec'
+    SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbz21ggFPEfI7ShmgOnUO3KkTBQEjoD6qNjtol4fChmJLD_Zg0kNOiOIETRaPMAe3rPx/exec'
 };
 
 // Datos locales (cache)
