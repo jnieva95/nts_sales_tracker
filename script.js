@@ -223,6 +223,40 @@ async function guardarEnSheets(nuevaVenta) {
     return await guardarEnScript(nuevaVenta);
 }
 
+// NUEVA FUNCIÓN: Actualizar venta existente en Google Apps Script
+async function actualizarEnScript(ventaActualizada) {
+    try {
+        console.log('🔄 Actualizando venta en Google Apps Script...', ventaActualizada.numeroOrden);
+        mostrarCarga(true);
+        
+        // Usar la acción 'updateSale' con los datos correctos
+        const result = await makeScriptRequest('updateSale', { 
+            saleData: ventaActualizada,
+            orderNumber: ventaActualizada.numeroOrden
+        });
+        
+        console.log('📦 Respuesta de actualización:', result);
+        
+        if (result && result.success === true) {
+            console.log('✅ Venta actualizada exitosamente en Google Apps Script');
+            return true;
+        } else if (result && result.success === false) {
+            console.error('❌ Error actualizando en script:', result.message);
+            throw new Error(result.message || 'Error actualizando en Google Apps Script');
+        } else {
+            console.log('⚠️ Respuesta inesperada al actualizar:', result);
+            return false;
+        }
+        
+    } catch (error) {
+        console.error('❌ Error completo actualizando en Google Apps Script:', error);
+        console.log('💡 Continuando con datos locales...');
+        return false;
+    } finally {
+        mostrarCarga(false);
+    }
+}
+
 // Inicializar con datos de ejemplo
 async function inicializarDatosEjemplo() {
     const datosEjemplo = [
