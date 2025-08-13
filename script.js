@@ -1,6 +1,6 @@
 // Configuración de Google Apps Script (Nueva versión con script propio)
 const GAS_CONFIG = {
-    SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbzUECzEA1fNu7x0Id7NaGtPFfxtbS7_WjqrOX67FBgzJcmGXav0BEJ1YKRtSUhEsXOC/exec'
+    SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbwBERdg50_6_phMeifwqkhd8jL_L7umVUwxCmrAsq0Gm88WpPFSqs6tdyrL_wV2EFY/exec'
 };
 
 // Datos locales (cache)
@@ -392,6 +392,7 @@ function generarNumeroOrden() {
 }
 
 // Registrar nueva venta (VERSIÓN CORREGIDA - detecta edición vs nueva venta)
+// Registrar nueva venta (SISTEMA DE DIFERENCIAS - crea fila separada para cambios)
 async function registrarVenta(e) {
     e.preventDefault();
     
@@ -411,13 +412,12 @@ async function registrarVenta(e) {
         return;
     }
     
-    // DETECTAR SI ES EDICIÓN: verificar si el número de orden ya existe en los datos locales
+    // DETECTAR SI ES EDICIÓN: verificar si el número de orden ya existe
     const indiceExistente = ventasData.findIndex(venta => venta.numeroOrden === numeroOrden);
     const esEdicion = indiceExistente !== -1;
     
     console.log('🔍 Número de orden:', numeroOrden);
     console.log('🔍 ¿Es edición?', esEdicion);
-    console.log('🔍 Índice existente:', indiceExistente);
     
     const nuevaVenta = {
         numeroOrden: numeroOrden,
@@ -434,14 +434,89 @@ async function registrarVenta(e) {
         notas: document.getElementById('notas').value || ''
     };
     
-    // Actualizar datos locales
+    let guardadoExitoso = false;
+    
     if (esEdicion) {
-        console.log('✏️ Actualizando venta existente...');
+        // SISTEMA DE DIFERENCIAS PARA EDICIÓN
+        const ventaOriginal = ventasData[indiceExistente];
+        
+        // Calcular diferencias
+        const diferenciaPago = nuevaVenta.montoPagado - ventaOriginal.montoPagado;
+        
+        console.log('💰 Monto original:', ventaOriginal.montoPagado);
+        console.log('💰 Monto nuevo:', nuevaVenta.montoPagado);
+        console.log('💰 Diferencia de pago:', diferenciaPago);
+        
+        // Actualizar datos locales
         ventasData[indiceExistente] = nuevaVenta;
+        
+        // Si hay diferencia en el pago, crear registro de diferencia
+        if (diferenciaPago !== 0) {
+            // Obtener fecha y hora actual para el pago
+            const fechaPago = new Date();
+            const fechaPagoFormateada = fechaPago.toISOString().split('T')[0];
+            const horaPago = fechaPago.toLocaleTimeString('es-AR', { 
+                hour: '2-digit', 
+                minute: '2-digit',
+                hour12: false 
+            });
+            
+            const registroDiferencia = {
+                numeroOrden: numeroOrden + '-PAGO-' + fechaPago.getTime(), // Agregar timestamp único
+                nombreCliente: nombreCliente + ' (Pago Adicional)',
+                emailCliente: emailCliente,
+                fechaVenta: fechaPagoFormateada, // Fecha del pago
+                tipoVenta: 'Pago Adicional',
+                destino: `Diferencia de Pago - ${destino}`,
+                fechaViaje: nuevaVenta.fechaViaje,
+                montoTotal: 0,
+                costoViaje: 0,
+                montoPagado: diferenciaPago, // Solo la diferencia
+                estadoPago: diferenciaPago > 0 ? 'Pago Adicional' : 'Ajuste Negativo',
+                notas: `PAGO REGISTRADO: ${fechaPagoFormateada} a las ${horaPago}
+Orden original: ${numeroOrden}
+Pago anterior: ${ventaOriginal.montoPagado.toLocaleString()}
+Nuevo total pagado: ${nuevaVenta.montoPagado.toLocaleString()}
+Diferencia aplicada: ${diferenciaPago.toLocaleString()}
+${diferenciaPago > 0 ? '💰 Pago adicional recibido' : '⚠️ Ajuste/devolución aplicado'}`
+            };
+            
+            console.log('📝 Creando registro de diferencia:', registroDiferencia);
+            
+            // Guardar registro de diferencia en Google Sheets
+            guardadoExitoso = await guardarEnScript(registroDiferencia);
+            
+            if (guardadoExitoso) {
+                alert(`✅ Venta de ${nuevaVenta.nombreCliente} actualizada!
+                
+📅 Fecha del pago: ${fechaPagoFormateada} a las ${horaPago}
+💰 Diferencia aplicada: ${diferenciaPago.toLocaleString()}
+${diferenciaPago > 0 ? '💳 Pago adicional registrado' : '🔄 Ajuste registrado'} en Google Sheets.`);
+            } else {
+                alert(`⚠️ Venta actualizada localmente. 
+                
+📅 Fecha del pago: ${fechaPagoFormateada} a las ${horaPago}
+💰 Diferencia: ${diferenciaPago.toLocaleString()}
+❌ Problema sincronizando con Google Sheets.`);
+            }
+        } else {
+            alert(`✅ Venta de ${nuevaVenta.nombreCliente} actualizada (sin cambios de pago).`);
+        }
+        
     } else {
+        // NUEVA VENTA - proceso normal
         console.log('➕ Agregando nueva venta...');
         ventasData.push(nuevaVenta);
         contadorOrden++;
+        
+        // Guardar nueva venta en Google Sheets
+        guardadoExitoso = await guardarEnScript(nuevaVenta);
+        
+        if (guardadoExitoso) {
+            alert(`✅ Nueva venta de ${nuevaVenta.nombreCliente} registrada y sincronizada exitosamente!`);
+        } else {
+            alert(`⚠️ Nueva venta de ${nuevaVenta.nombreCliente} registrada localmente. Problemas de sincronización.`);
+        }
     }
     
     // Limpiar formulario
@@ -460,32 +535,9 @@ async function registrarVenta(e) {
         formSection.style.border = '';
     }
     
-    // Actualizar vista inmediatamente
+    // Actualizar vista
     actualizarDashboard();
     renderizarTabla();
-    
-    // Sincronizar con Google Apps Script
-    let guardadoExitoso;
-    
-    if (esEdicion) {
-        console.log('🔄 Sincronizando actualización con Google Apps Script...');
-        guardadoExitoso = await actualizarEnScript(nuevaVenta);
-        
-        if (guardadoExitoso) {
-            alert(`✅ Venta de ${nuevaVenta.nombreCliente} actualizada y sincronizada exitosamente!`);
-        } else {
-            alert(`⚠️ Venta de ${nuevaVenta.nombreCliente} actualizada localmente. Problemas de sincronización con Google Apps Script.`);
-        }
-    } else {
-        console.log('💾 Sincronizando nueva venta con Google Apps Script...');
-        guardadoExitoso = await guardarEnScript(nuevaVenta);
-        
-        if (guardadoExitoso) {
-            alert(`✅ Nueva venta de ${nuevaVenta.nombreCliente} registrada y sincronizada exitosamente!`);
-        } else {
-            alert(`⚠️ Nueva venta de ${nuevaVenta.nombreCliente} registrada localmente. Problemas de sincronización con Google Apps Script.`);
-        }
-    }
     
     console.log('✅ Proceso completado:', nuevaVenta.numeroOrden);
 }
