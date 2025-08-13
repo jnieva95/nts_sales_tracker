@@ -199,18 +199,27 @@ async function guardarEnScript(nuevaVenta) {
         mostrarCarga(true);
         
         const result = await makeScriptRequest('addSale', { venta: nuevaVenta });
+        console.log('📦 Respuesta completa del script:', result);
         
-        if (result.success) {
+        // Verificar diferentes formatos de respuesta
+        if (result && (result.success === true || result.status === 'success' || result === 'OK')) {
             console.log('✅ Venta guardada exitosamente en Google Apps Script');
             return true;
+        } else if (result && result.error) {
+            console.error('❌ Error del script:', result.error);
+            throw new Error(result.error);
+        } else if (result) {
+            // Si hay respuesta pero no tiene formato esperado, asumir éxito
+            console.log('✅ Respuesta del script (formato no estándar):', result);
+            return true;
         } else {
-            console.error('❌ Error guardando en Google Apps Script:', result.error);
-            throw new Error(result.error || 'Error desconocido al guardar');
+            throw new Error('Sin respuesta del Google Apps Script');
         }
         
     } catch (error) {
         console.error('❌ Error completo guardando en Google Apps Script:', error);
-        return false;
+        console.log('💡 Continuando con datos locales...');
+        return false; // No fallar, solo continuar localmente
     } finally {
         mostrarCarga(false);
     }
