@@ -89,30 +89,13 @@ function mostrarCarga(mostrar) {
     }
 }
 
-// Cargar datos desde Google Apps Script
+// Cargar datos desde Google Apps Script (usando script tag para evitar CORS)
 async function cargarDatosDesdeScript() {
     try {
         console.log('📥 Cargando datos desde Google Apps Script...');
         console.log('🔗 URL del script:', GAS_CONFIG.SCRIPT_URL);
         
-        const testUrl = `${GAS_CONFIG.SCRIPT_URL}?action=getSales`;
-        console.log('🧪 URL de prueba:', testUrl);
-        
-        const response = await fetch(testUrl, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        });
-        
-        console.log('📡 Response status:', response.status);
-        console.log('📡 Response ok:', response.ok);
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status} - ${response.statusText}`);
-        }
-        
-        const result = await response.json();
+        const result = await makeScriptRequest('getSales');
         console.log('📦 Resultado del script:', result);
         
         if (result.success && result.data && result.data.length > 0) {
@@ -147,12 +130,66 @@ async function cargarDatosDesdeScript() {
     } catch (error) {
         console.error('❌ Error completo:', error);
         console.error('❌ Error message:', error.message);
-        console.error('❌ Error stack:', error.stack);
         
-        alert(`Error conectando con Google Apps Script: ${error.message}\n\nVerifique que el script esté publicado correctamente.`);
+        alert(`Error conectando con Google Apps Script: ${error.message}\n\nUsando datos locales por ahora.`);
         // Cargar datos de ejemplo en caso de error
         inicializarDatosEjemplo();
     }
+}
+
+// Función universal para hacer requests al script (evita CORS)
+function makeScriptRequest(action, params = {}) {
+    return new Promise((resolve, reject) => {
+        // Crear nombre único para callback
+        const callbackName = 'script_callback_' + Math.round(100000 * Math.random());
+        
+        // Crear URL con parámetros
+        let url = `${GAS_CONFIG.SCRIPT_URL}?action=${action}&callback=${callbackName}`;
+        
+        // Agregar parámetros adicionales
+        Object.keys(params).forEach(key => {
+            url += `&${key}=${encodeURIComponent(JSON.stringify(params[key]))}`;
+        });
+        
+        console.log('🌐 Llamando script con URL:', url);
+        
+        // Crear elemento script
+        const script = document.createElement('script');
+        
+        // Definir callback global
+        window[callbackName] = function(data) {
+            console.log('📥 Respuesta recibida:', data);
+            delete window[callbackName];
+            if (document.body.contains(script)) {
+                document.body.removeChild(script);
+            }
+            resolve(data);
+        };
+        
+        // Manejar errores
+        script.onerror = function() {
+            delete window[callbackName];
+            if (document.body.contains(script)) {
+                document.body.removeChild(script);
+            }
+            reject(new Error('Error cargando script - verifique que esté publicado correctamente'));
+        };
+        
+        // Configurar y agregar script
+        script.src = url;
+        document.body.appendChild(script);
+        
+        // Timeout de 15 segundos
+        setTimeout(() => {
+            if (window[callbackName]) {
+                delete window[callbackName];
+                if (document.body.contains(script)) {
+                    document.body.removeChild(script);
+                }
+                reject(new Error('Timeout - Google Apps Script no respondió en 15 segundos'));
+            }
+        }, 15000);
+    });
 }
 
 // Guardar datos en Google Sheets
