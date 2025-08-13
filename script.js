@@ -192,52 +192,33 @@ function makeScriptRequest(action, params = {}) {
     });
 }
 
-// Guardar datos en Google Sheets
-async function guardarEnSheets(nuevaVenta) {
+// FUNCIÓN FALTANTE: Guardar datos en Google Apps Script
+async function guardarEnScript(nuevaVenta) {
     try {
+        console.log('💾 Guardando venta en Google Apps Script...', nuevaVenta.numeroOrden);
         mostrarCarga(true);
         
-        const values = [[
-            nuevaVenta.numeroOrden,
-            nuevaVenta.nombreCliente,
-            nuevaVenta.emailCliente,
-            nuevaVenta.fechaVenta,
-            nuevaVenta.tipoVenta,
-            nuevaVenta.destino,
-            nuevaVenta.fechaViaje,
-            nuevaVenta.montoTotal,
-            nuevaVenta.costoViaje,
-            nuevaVenta.montoPagado,
-            nuevaVenta.estadoPago,
-            nuevaVenta.notas
-        ]];
+        const result = await makeScriptRequest('addSale', { venta: nuevaVenta });
         
-        const response = await fetch(WRITE_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                values: values
-            })
-        });
-        
-        if (response.ok) {
-            console.log('✅ Venta guardada en Google Sheets');
+        if (result.success) {
+            console.log('✅ Venta guardada exitosamente en Google Apps Script');
             return true;
         } else {
-            const errorData = await response.json();
-            console.error('Error details:', errorData);
-            throw new Error(`Error ${response.status}: ${errorData.error?.message || 'Error desconocido'}`);
+            console.error('❌ Error guardando en Google Apps Script:', result.error);
+            throw new Error(result.error || 'Error desconocido al guardar');
         }
         
     } catch (error) {
-        console.error('❌ Error guardando en Sheets:', error);
-        alert(`❌ Error guardando en Google Sheets: ${error.message}\n\nLa venta se mantiene localmente. Verifique su configuración.`);
+        console.error('❌ Error completo guardando en Google Apps Script:', error);
         return false;
     } finally {
         mostrarCarga(false);
     }
+}
+
+// Función de compatibilidad: mantener guardarEnSheets para referencias existentes
+async function guardarEnSheets(nuevaVenta) {
+    return await guardarEnScript(nuevaVenta);
 }
 
 // Inicializar con datos de ejemplo
@@ -362,10 +343,10 @@ async function registrarVenta(e) {
 
 // Sincronizar datos (botón manual)
 async function sincronizarDatos() {
-    await cargarDatosDesdeSheets();
+    await cargarDatosDesdeScript();
     actualizarDashboard();
     renderizarTabla();
-    alert('🔄 Datos sincronizados con Google Sheets');
+    alert('🔄 Datos sincronizados con Google Apps Script');
 }
 
 // Actualizar estado de pago automáticamente
