@@ -326,7 +326,7 @@ function generarNumeroOrden() {
     document.getElementById('numeroOrden').value = numeroOrden;
 }
 
-// Registrar nueva venta (SISTEMA DE DIFERENCIAS - CORREGIDO)
+/ FUNCIÓN CORREGIDA: registrarVenta - Arregla cálculo de diferencias
 async function registrarVenta(e) {
     e.preventDefault();
     
@@ -381,9 +381,6 @@ async function registrarVenta(e) {
         console.log('💰 Monto nuevo:', nuevaVenta.montoPagado);
         console.log('💰 Diferencia de pago:', diferenciaPago);
         
-        // Actualizar datos locales
-        ventasData[indiceExistente] = nuevaVenta;
-        
         // Si hay diferencia en el pago, crear registro de diferencia
         if (diferenciaPago !== 0) {
             // Obtener fecha y hora actual para el pago
@@ -395,6 +392,7 @@ async function registrarVenta(e) {
                 hour12: false 
             });
             
+            // CREAR REGISTRO DE SOLO LA DIFERENCIA
             const registroDiferencia = {
                 numeroOrden: numeroOrden + '-PAGO-' + fechaPago.getTime(),
                 nombreCliente: nombreCliente + ' (Pago Adicional)',
@@ -405,34 +403,43 @@ async function registrarVenta(e) {
                 fechaViaje: nuevaVenta.fechaViaje,
                 montoTotal: 0,
                 costoViaje: 0,
-                montoPagado: diferenciaPago,
+                montoPagado: diferenciaPago,  // ← SOLO LA DIFERENCIA
                 estadoPago: diferenciaPago > 0 ? 'Pago Adicional' : 'Ajuste Negativo',
-                fechaPago: fechaPagoFormateada,    // ← NUEVA COLUMNA
-                horaPago: horaPago,                // ← NUEVA COLUMNA
+                fechaPago: fechaPagoFormateada,
+                horaPago: horaPago,
                 notas: `Diferencia de pago para orden ${numeroOrden}. Pago anterior: $${ventaOriginal.montoPagado.toLocaleString()}, Nuevo total: $${nuevaVenta.montoPagado.toLocaleString()}, Diferencia: $${diferenciaPago.toLocaleString()}`
             };
             
-            console.log('📝 Creando registro de diferencia:', registroDiferencia);
+            console.log('📝 Creando registro de SOLO LA DIFERENCIA:', registroDiferencia);
+            console.log('📝 Diferencia a guardar:', diferenciaPago);
             
             // Guardar registro de diferencia en Google Sheets
             guardadoExitoso = await guardarEnScript(registroDiferencia);
             
             if (guardadoExitoso) {
-                alert(`✅ Venta de ${nuevaVenta.nombreCliente} actualizada!
+                alert(`✅ Diferencia de pago registrada!
                 
 📅 Fecha del pago: ${fechaPagoFormateada} a las ${horaPago}
 💰 Diferencia aplicada: $${diferenciaPago.toLocaleString()}
-${diferenciaPago > 0 ? '💳 Pago adicional registrado' : '🔄 Ajuste registrado'} en Google Sheets.`);
+${diferenciaPago > 0 ? '💳 Pago adicional de $' + diferenciaPago.toLocaleString() : '🔄 Ajuste de $' + Math.abs(diferenciaPago).toLocaleString()} registrado en Google Sheets.
+
+📊 Resumen:
+• Pago anterior: $${ventaOriginal.montoPagado.toLocaleString()}
+• Nuevo total pagado: $${nuevaVenta.montoPagado.toLocaleString()}
+• Solo se guardó la diferencia: $${diferenciaPago.toLocaleString()}`);
             } else {
-                alert(`⚠️ Venta actualizada localmente. 
+                alert(`⚠️ Problema sincronizando con Google Sheets.
                 
 📅 Fecha del pago: ${fechaPagoFormateada} a las ${horaPago}
 💰 Diferencia: $${diferenciaPago.toLocaleString()}
-❌ Problema sincronizando con Google Sheets.`);
+❌ La diferencia no se pudo guardar en Google Sheets.`);
             }
         } else {
             alert(`✅ Venta de ${nuevaVenta.nombreCliente} actualizada (sin cambios de pago).`);
         }
+        
+        // ACTUALIZAR datos locales DESPUÉS de crear el registro de diferencia
+        ventasData[indiceExistente] = nuevaVenta;
         
     } else {
         // NUEVA VENTA - proceso normal
@@ -755,6 +762,7 @@ Para eliminar permanentemente la venta de ${venta.nombreCliente}, escriba exacta
     }
 }
 
+// FUNCIÓN CORREGIDA: editarVenta - Arregla fechas vacías
 async function editarVenta(index) {
     if (index < 0 || index >= ventasData.length) {
         alert('❌ Error: Venta no encontrada');
@@ -767,19 +775,21 @@ async function editarVenta(index) {
     document.getElementById('numeroOrden').value = venta.numeroOrden;
     document.getElementById('nombreCliente').value = venta.nombreCliente;
     document.getElementById('emailCliente').value = venta.emailCliente;
-    document.getElementById('fechaVenta').value = venta.fechaVenta;
+    
+    // ARREGLO: Convertir fechas correctamente
+    document.getElementById('fechaVenta').value = venta.fechaVenta || '';
+    document.getElementById('fechaViaje').value = venta.fechaViaje || '';
+    
     document.getElementById('tipoVenta').value = venta.tipoVenta;
     document.getElementById('destino').value = venta.destino;
-    document.getElementById('fechaViaje').value = venta.fechaViaje;
     document.getElementById('montoTotal').value = venta.montoTotal;
     document.getElementById('costoViaje').value = venta.costoViaje;
     document.getElementById('montoPagado').value = venta.montoPagado;
     document.getElementById('estadoPago').value = venta.estadoPago;
     document.getElementById('notas').value = venta.notas;
     
-    // Eliminar la venta original del array (se volverá a agregar cuando se envíe el formulario)
-    ventasData.splice(index, 1);
-    contadorOrden--;
+    // NO ELIMINAR la venta del array hasta que se confirme la edición
+    // Esto causaba el problema de detectar edición vs nueva venta
     
     // Actualizar vista
     actualizarDashboard();
